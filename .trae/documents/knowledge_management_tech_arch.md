@@ -20,25 +20,31 @@ graph TD
 
 ## 2. 技术描述
 
-- 前端：React@18 + TypeScript + Tailwind CSS@3 + Vite
-- 状态管理：Zustand@4
-- 路由：React Router@6
-- 图表库：Recharts@2
-- 图标：Lucide React
-- 数据存储：浏览器 Local Storage
-- 构建工具：Vite@4
+* 前端：React\@18 + TypeScript + Tailwind CSS\@3 + Vite
+
+* 状态管理：Zustand\@4
+
+* 路由：React Router\@6
+
+* 图表库：Recharts\@2
+
+* 图标：Lucide React
+
+* 数据存储：浏览器 Local Storage
+
+* 构建工具：Vite\@4
 
 ## 3. 路由定义
 
-| 路由 | 用途 |
-|-------|---------|
-| / | 仪表板页面，显示学习概览和统计数据 |
-| /resources | 资源管理页面，管理所有知识资源 |
-| /resources/new | 新建资源页面，添加新的学习资源 |
-| /resources/:id/edit | 编辑资源页面，修改资源信息 |
-| /progress | 学习进度页面，跟踪和管理学习进度 |
-| /payments | 支付记录页面，管理费用和分析投入 |
-| /settings | 设置页面，配置系统参数和偏好 |
+| 路由                  | 用途                |
+| ------------------- | ----------------- |
+| /                   | 仪表板页面，显示学习概览和统计数据 |
+| /resources          | 资源管理页面，管理所有知识资源   |
+| /resources/new      | 新建资源页面，添加新的学习资源   |
+| /resources/:id/edit | 编辑资源页面，修改资源信息     |
+| /progress           | 学习进度页面，跟踪和管理学习进度  |
+| /payments           | 支付记录页面，管理费用和分析投入  |
+| /settings           | 设置页面，配置系统参数和偏好    |
 
 ## 4. 数据模型定义
 
@@ -331,6 +337,7 @@ class DataFormatter {
 ## 9. 性能优化
 
 ### 9.1 虚拟滚动
+
 对于大量资源列表，实现虚拟滚动优化：
 
 ```typescript
@@ -344,6 +351,7 @@ interface VirtualListProps<T> {
 ```
 
 ### 9.2 数据缓存
+
 实现智能数据缓存策略，减少本地存储读写：
 
 ```typescript
@@ -389,3 +397,4 @@ interface ValidationResult {
   errors: ValidationError[];
 }
 ```
+

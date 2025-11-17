@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   BookOpen, 
@@ -11,6 +11,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useProgressStore } from '@/stores';
+import { useAuthStore } from '@/stores/authStore';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,7 +21,12 @@ export default function Layout({ children }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const { currentSession } = useProgressStore();
+  const { user, logout, fetchUser } = useAuthStore();
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const authed = !!useAuthStore((s) => s.token);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -34,6 +40,30 @@ export default function Layout({ children }: LayoutProps) {
       if (interval) clearInterval(interval);
     };
   }, [currentSession]);
+
+  useEffect(() => {
+    const token = useAuthStore.getState().token;
+    if (token && !user) {
+      fetchUser();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', escHandler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', escHandler);
+    };
+  }, []);
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
@@ -148,6 +178,52 @@ export default function Layout({ children }: LayoutProps) {
                 <span className="text-xs font-medium">学习中 {formatTime(elapsedTime)}</span>
                 <span className="text-xs">前往</span>
               </Link>
+            )}
+            {!authed && (
+              <Link
+                to="/login"
+                className="px-3 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                登录
+              </Link>
+            )}
+            {authed && (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="px-3 py-1 rounded-md bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+                >
+                  <span className="inline-flex items-center space-x-2">
+                    <span className="h-6 w-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">
+                      {((user?.nick_name || user?.email || '账').trim().charAt(0)).toUpperCase()}
+                    </span>
+                    <span>{(user?.nick_name || user?.email) || '账户'}</span>
+                  </span>
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                    <Link
+                      to="/settings?tab=account"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      账户设置
+                    </Link>
+                    <button
+                      onClick={() => { setUserMenuOpen(false); navigate('/settings'); }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      我的资料
+                    </button>
+                    <button
+                      onClick={() => { setUserMenuOpen(false); logout(); navigate('/login'); }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      退出登录
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           </div>

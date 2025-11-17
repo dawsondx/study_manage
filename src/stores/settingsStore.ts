@@ -66,7 +66,8 @@ export const useSettingsStore = create<SettingsStore>()(
       }
     }),
     {
-      name: 'settings-store'
+      name: 'settings-store',
+      skipHydration: true
     }
   )
 );

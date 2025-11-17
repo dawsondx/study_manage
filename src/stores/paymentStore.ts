@@ -16,6 +16,7 @@ interface PaymentStore {
   getYearlySpending: () => number;
   isOverBudget: () => boolean;
   getBudgetAlertMessage: () => string | null;
+  fetchAll: () => Promise<void>;
   clearAllData: () => void;
 }
 
@@ -178,6 +179,15 @@ export const usePaymentStore = create<PaymentStore>()(
         }
 
         return null;
+      },
+
+      clearAllData: () => {
+        set({ payments: [], budgetSettings: defaultBudgetSettings })
+      },
+
+      fetchAll: async () => {
+        const data = await api.getPayments()
+        set({ payments: Array.isArray(data) ? data : [] })
       }
     }),
     {
@@ -185,7 +195,9 @@ export const usePaymentStore = create<PaymentStore>()(
       partialize: (state) => ({
         payments: state.payments,
         budgetSettings: state.budgetSettings
-      })
+      }),
+      skipHydration: true
     }
   )
 );
+import { api } from '@/lib/api';

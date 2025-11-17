@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useResourceStore, useProgressStore, usePaymentStore } from '@/stores';
+import { useAuthStore } from '@/stores/authStore';
+import { api } from '@/lib/api';
 import { DataFormatter } from '@/utils';
 import { toast } from 'sonner';
 import {
@@ -74,7 +77,15 @@ export default function Settings() {
   const { payments, clearAllData: clearPayments } = usePaymentStore();
 
   const [settings, setSettings] = useState<SettingsState>(defaultSettings);
-  const [activeTab, setActiveTab] = useState<'general' | 'notifications' | 'data' | 'display'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'notifications' | 'data' | 'display' | 'account'>('general');
+  const { user, fetchUser } = useAuthStore();
+  const [nickNameInput, setNickNameInput] = useState<string>(user?.nick_name || '');
+  const [pwdCurrent, setPwdCurrent] = useState('');
+  const [pwdNew, setPwdNew] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [changingPwd, setChangingPwd] = useState(false);
+  const location = useLocation();
+  const avatarInitial = ((user?.nick_name || user?.email || '账户').trim().charAt(0) || 'A').toUpperCase();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -186,8 +197,21 @@ export default function Settings() {
     { id: 'general', label: '通用', icon: SettingsIcon },
     { id: 'notifications', label: '通知', icon: Bell },
     { id: 'data', label: '数据', icon: Database },
-    { id: 'display', label: '显示', icon: Palette }
+    { id: 'display', label: '显示', icon: Palette },
+    { id: 'account', label: '账户', icon: User }
   ];
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const t = params.get('tab');
+    if (t && ['general','notifications','data','display','account'].includes(t)) {
+      setActiveTab(t as any);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    setNickNameInput(user?.nick_name || '')
+  }, [user?.nick_name, user?.email])
 
   return (
     <div className="space-y-6">
@@ -230,6 +254,55 @@ export default function Settings() {
         </div>
 
         <div className="p-6">
+          {activeTab === 'account' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+                <h3 className="text-lg font-medium text-gray-900">账户资料</h3>
+                <div className="flex items-center space-x-3">
+                  <div className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-semibold">
+                    {avatarInitial}
+                  </div>
+                  <div className="text-gray-900 font-medium">{user?.nick_name || user?.email || '账户'}</div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">邮箱</label>
+                    <input value={user?.email || ''} readOnly className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">昵称</label>
+                    <input value={nickNameInput} onChange={(e)=>setNickNameInput(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div className="flex justify-end">
+                    <button onClick={async ()=>{ if(savingProfile) return; setSavingProfile(true); try { await api.updateUserProfile({ nick_name: nickNameInput }); await fetchUser(); toast.success('资料已更新'); } catch { toast.error('更新失败'); } finally { setSavingProfile(false); } }} className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                      <Save className="w-4 h-4 mr-2" />
+                      保存资料
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+                <h3 className="text-lg font-medium text-gray-900">修改密码</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">当前密码</label>
+                    <input type="password" value={pwdCurrent} onChange={(e)=>setPwdCurrent(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">新密码</label>
+                    <input type="password" value={pwdNew} onChange={(e)=>setPwdNew(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div className="flex justify-end">
+                    <button onClick={async ()=>{ if(changingPwd) return; setChangingPwd(true); try { await api.changePassword({ current_password: pwdCurrent, new_password: pwdNew }); setPwdCurrent(''); setPwdNew(''); toast.success('密码已修改'); } catch { toast.error('修改失败'); } finally { setChangingPwd(false); } }} className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                      <Save className="w-4 h-4 mr-2" />
+                      保存密码
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* 通用设置 */}
           {activeTab === 'general' && (
             <div className="space-y-6">

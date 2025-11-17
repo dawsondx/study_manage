@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Resource, Category, ResourceFilters, RESOURCE_TYPES } from '../types';
 import { usePaymentStore } from './paymentStore';
+import { api } from '@/lib/api';
 
 interface ResourceStore {
   resources: Resource[];
@@ -19,46 +20,11 @@ interface ResourceStore {
   getResourcesByType: (type: Resource['resourceType']) => Resource[];
   getResourcesByCategory: (categoryId: string) => Resource[];
   getResourcesByStatus: (status: Resource['status']) => Resource[];
+  fetchAll: () => Promise<void>;
   clearAllData: () => void;
 }
 
-const defaultCategories: Category[] = [
-  {
-    id: '1',
-    name: '编程开发',
-    color: '#3B82F6',
-    icon: 'code',
-    createdAt: new Date()
-  },
-  {
-    id: '2', 
-    name: '设计创意',
-    color: '#8B5CF6',
-    icon: 'palette',
-    createdAt: new Date()
-  },
-  {
-    id: '3',
-    name: '商业管理',
-    color: '#10B981',
-    icon: 'briefcase',
-    createdAt: new Date()
-  },
-  {
-    id: '4',
-    name: '语言学习',
-    color: '#F59E0B',
-    icon: 'languages',
-    createdAt: new Date()
-  },
-  {
-    id: '5',
-    name: '职业技能',
-    color: '#EF4444',
-    icon: 'graduation-cap',
-    createdAt: new Date()
-  }
-];
+const defaultCategories: Category[] = [];
 
 export const useResourceStore = create<ResourceStore>()(
   persist(
@@ -240,7 +206,17 @@ export const useResourceStore = create<ResourceStore>()(
       },
 
       clearAllData: () => {
-        set({ resources: [], categories: defaultCategories });
+        set({ resources: [], categories: [] });
+      },
+
+      fetchAll: async () => {
+        set({ loading: true })
+        try {
+          const data = await api.getResources()
+          set({ resources: Array.isArray(data) ? data : [] })
+        } finally {
+          set({ loading: false })
+        }
       }
     }),
     {
@@ -248,7 +224,8 @@ export const useResourceStore = create<ResourceStore>()(
       partialize: (state) => ({
         resources: state.resources,
         categories: state.categories
-      })
+      }),
+      skipHydration: true
     }
   )
 );

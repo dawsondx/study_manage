@@ -19,6 +19,7 @@ interface ProgressStore {
   };
   isStudying: () => boolean;
   getCurrentSessionDuration: () => number;
+  fetchAll: () => Promise<void>;
   clearAllData: () => void;
 }
 
@@ -144,13 +145,20 @@ export const useProgressStore = create<ProgressStore>()(
 
       clearAllData: () => {
         set({ studyRecords: [], currentSession: undefined });
+      },
+
+      fetchAll: async () => {
+        const data = await api.getProgressRecords()
+        set({ studyRecords: Array.isArray(data) ? data : [] })
       }
     }),
     {
       name: 'progress-store',
       partialize: (state) => ({
         studyRecords: state.studyRecords
-      })
+      }),
+      skipHydration: true
     }
   )
 );
+import { api } from '@/lib/api';
