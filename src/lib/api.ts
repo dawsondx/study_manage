@@ -23,7 +23,8 @@ function getToken() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`
+  const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
       ...(API_KEY ? { 'CODE_FLYING': API_KEY } : {}),
@@ -39,6 +40,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       window.location.href = '/login'
     }
     throw new Error('Unauthorized')
+  }
+  const ct = res.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    const text = await res.text()
+    const hint = `HTTP ${res.status} ${res.statusText}`
+    const preview = text.slice(0, 120)
+    throw new Error(`接口返回非 JSON：${hint}，路径：${url}，内容片段：${preview}`)
   }
   const json: BaseResponse<T> = await res.json()
   if (!json.success) {
