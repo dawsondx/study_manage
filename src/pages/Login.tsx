@@ -25,7 +25,17 @@ export default function Login() {
       if (isRegisterMode) {
         await onRegister()
       } else {
-        await login(email, password)
+        try {
+          await login(email, password)
+        } catch (err: any) {
+          const m = String(err?.message || '')
+          if (m.includes('参数') || m.includes('UsernameNotFound') || m.includes('NOT_LOGIN') || m.includes('no_auth')) {
+            await api.userRegister({ email, password, nick_name: nickName || email.split('@')[0] })
+            await login(email, password)
+          } else {
+            throw err
+          }
+        }
         navigate('/')
       }
     } catch (e: any) {
