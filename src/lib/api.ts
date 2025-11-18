@@ -70,7 +70,7 @@ export const api = {
     }
     return request<string>(`/login/passwd`, {
       method: 'POST',
-      body: JSON.stringify({ phone: email, password, user_name: email, email })
+      body: JSON.stringify({ email, password })
     })
   },
   getUserInfo: () => request<any>(`/getUserInfo`)
@@ -132,9 +132,9 @@ export const api = {
     return request<any>(`/login/register`, {
       method: 'POST',
       body: JSON.stringify({
-        ...payload,
-        phone: payload.email,
-        user_name: payload.email
+        email: payload.email,
+        password: payload.password,
+        nick_name: payload.nick_name
       })
     })
   }
