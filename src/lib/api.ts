@@ -70,7 +70,7 @@ export const api = {
     }
     return request<string>(`/login/passwd`, {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ phone: email, password })
     })
   },
   getUserInfo: () => request<any>(`/getUserInfo`)
