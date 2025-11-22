@@ -17,6 +17,13 @@ export default function Login() {
   const [isRegisterMode, setIsRegisterMode] = useState(false)
 
   useEffect(() => {
+    // 检查是否有重定向路径
+    const redirectPath = sessionStorage.getItem('redirect_path')
+    if (redirectPath) {
+      console.log('Found redirect path:', redirectPath)
+    }
+    
+    // 处理OAuth回调
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     const success = params.get('login_success')
@@ -26,7 +33,10 @@ export default function Login() {
         navigate('/')
       })
     }
-  }, [])
+    
+    // 检查API配置
+    console.log('Login page loaded, checking API configuration...')
+  }, [fetchUser, navigate])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

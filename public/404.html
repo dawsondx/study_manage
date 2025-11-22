@@ -1,9 +1,63 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="0; url=/">
-    <title>404</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识付费管理</title>
+    <script type="module">
+      // SPA路由处理：将所有路径重定向到index.html
+      (function() {
+        // 获取当前路径
+        const path = window.location.pathname;
+        const hash = window.location.hash;
+        
+        // 避免循环重定向
+        if (path === '/index.html' || path === '/' || path.includes('/assets/')) {
+          return;
+        }
+        
+        // 保存原始路径到sessionStorage，以便应用可以恢复
+        sessionStorage.setItem('redirect_path', path + hash);
+        
+        // 重定向到根路径，让React Router处理路由
+        window.location.replace('/');
+      })();
+    </script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .loading {
+        color: white;
+        font-size: 18px;
+        text-align: center;
+      }
+      .spinner {
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top: 3px solid white;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
-  <body></body>
+  <body>
+    <div class="loading">
+      <div class="spinner"></div>
+      页面加载中...
+    </div>
+  </body>
 </html>

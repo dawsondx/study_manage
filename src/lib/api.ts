@@ -2,6 +2,13 @@ const API_BASE = import.meta.env.VITE_AIPEX_API || ''
 const API_KEY = import.meta.env.VITE_AIPEX_API_KEY || ''
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true' || false
 
+// 调试信息
+console.log('API Configuration:', {
+  API_BASE: API_BASE,
+  API_KEY: API_KEY ? '***' : 'empty',
+  USE_MOCK_API: USE_MOCK_API
+})
+
 // Mock API for development
 const mockRequest = async <T>(mockData: T, delay = 500): Promise<T> => {
   await new Promise(resolve => setTimeout(resolve, delay))
