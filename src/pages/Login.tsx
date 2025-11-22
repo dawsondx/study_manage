@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
@@ -7,7 +7,7 @@ import { BookOpen, Github, User, Mail, Lock, UserPlus } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuthStore()
+  const { login, fetchUser } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [nickName, setNickName] = useState('')
@@ -15,6 +15,18 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [isRegisterMode, setIsRegisterMode] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const success = params.get('login_success')
+    if (token && success === 'true') {
+      localStorage.setItem('auth_token', token)
+      fetchUser().finally(() => {
+        navigate('/')
+      })
+    }
+  }, [])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

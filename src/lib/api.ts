@@ -70,7 +70,7 @@ export const api = {
     }
     return request<string>(`/login/passwd`, {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ phone: email, email, password }) // 同时传递phone和email字段，使用相同值
     })
   },
   getUserInfo: () => request<any>(`/getUserInfo`)
