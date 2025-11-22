@@ -142,7 +142,7 @@ export const api = {
       body: JSON.stringify({
         email: payload.email,
         password: payload.password,
-        nick_name: payload.nick_name
+        user_name: payload.nick_name  // 将 nick_name 改为 user_name 以匹配后端期望的参数名
       })
     })
   }
