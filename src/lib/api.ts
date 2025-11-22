@@ -64,13 +64,21 @@ export const api = {
     message: string
   }>(`/admin/version`)
   ,
-  loginPasswd: (email: string, password: string) => {
+  loginPasswd: (phoneOrEmail: string, password: string) => {
     if (USE_MOCK_API) {
       return mockRequest<string>(`mock_jwt_token_${Math.random().toString(36).substr(2, 9)}`, 800)
     }
+    // 判断是手机号还是邮箱格式，只传递对应的字段
+    const isEmail = phoneOrEmail.includes('@')
+    const params: any = { password }
+    if (isEmail) {
+      params.email = phoneOrEmail
+    } else {
+      params.phone = phoneOrEmail
+    }
     return request<string>(`/login/passwd`, {
       method: 'POST',
-      body: JSON.stringify({ phone: email, email, password }) // 同时传递phone和email字段，使用相同值
+      body: JSON.stringify(params)
     })
   },
   getUserInfo: () => request<any>(`/getUserInfo`)
