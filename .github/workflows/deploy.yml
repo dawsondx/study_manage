@@ -25,7 +25,7 @@ jobs:
 
       - name: Inject production env from Secrets
         run: |
-          echo "VITE_AIPEX_API=${{ secrets.VITE_AIPEX_API }}" >> .env.production
+          # echo "VITE_AIPEX_API=${{ secrets.VITE_AIPEX_API }}" >> .env.production
           echo "VITE_AIPEX_API_KEY=${{ secrets.VITE_AIPEX_API_KEY }}" >> .env.production
 
       - name: Build
