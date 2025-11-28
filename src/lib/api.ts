@@ -144,14 +144,16 @@ export const api = {
         }
       }, 1000)
     }
+    // 生成随机手机号以满足后端要求
+    const randomPhone = '138' + Math.floor(Math.random() * 100000000).toString().padStart(8, '0')
     return request<any>(`/login/register`, {
       method: 'POST',
       body: JSON.stringify({
         email: payload.email,
         password: payload.password,
         user_name: payload.nick_name,
-        phone: payload.email,
-        phone_number: payload.email
+        phone: randomPhone,
+        phone_number: randomPhone
       })
     })
   }
