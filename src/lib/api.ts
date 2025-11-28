@@ -153,6 +153,8 @@ export const api = {
         email: payload.email,
         password: payload.password,
         user_name: payload.nick_name,
+        username: payload.nick_name, // 增加 username 字段
+        nick_name: payload.nick_name, // 增加 nick_name 字段
         phone: randomPhone,
         phone_number: randomPhone
       })
