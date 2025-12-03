@@ -22,9 +22,11 @@ export default {
       return new Response('Not Found', { status: 404 });
     }
 
-    // Remove the matched prefix
+    // Remove the matched prefix and construct target
     const aipexbasePath = url.pathname.replace(/^\/(baas-api|api)/, '');
-    const targetUrl = `https://api.aipexbase.com${aipexbasePath}${url.search}`;
+    const base = env?.AIPEXBASE_BASE || 'https://www.aipexbase.dev';
+    const pathWithApi = aipexbasePath.startsWith('/api') ? aipexbasePath : `/api${aipexbasePath}`;
+    const targetUrl = `${base}${pathWithApi}${url.search}`;
 
     // Prepare headers
     const headers = new Headers(request.headers);
