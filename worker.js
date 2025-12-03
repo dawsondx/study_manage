@@ -51,6 +51,8 @@ export default {
     headers.delete('cf-ray');
     headers.delete('cf-visitor');
     headers.delete('x-forwarded-proto');
+    headers.delete('origin');
+    headers.delete('referer');
 
     const injectedKey = env?.AIPEXBASE_API_KEY || env?.VITE_AIPEX_API_KEY || '';
     if (!headers.get('CODE_FLYING') && injectedKey) {
