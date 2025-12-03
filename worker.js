@@ -24,9 +24,12 @@ export default {
 
     // Remove the matched prefix and construct target
     const aipexbasePath = url.pathname.replace(/^\/(baas-api|api)/, '');
-    const base = env?.AIPEXBASE_BASE || 'https://www.aipexbase.dev';
     const pathWithApi = aipexbasePath.startsWith('/api') ? aipexbasePath : `/api${aipexbasePath}`;
-    const targetUrl = `${base}${pathWithApi}${url.search}`;
+    const bases = Array.from(new Set([
+      env?.AIPEXBASE_BASE,
+      'https://api.aipexbase.com',
+      'https://www.aipexbase.dev'
+    ].filter(Boolean)));
 
     // Prepare headers
     const headers = new Headers(request.headers);
@@ -42,30 +45,41 @@ export default {
       headers.set('CODE_FLYING', injectedKey);
     }
 
-    try {
-      const response = await fetch(targetUrl, {
-        method: request.method,
-        headers,
-        body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
-        redirect: 'manual'
-      });
+    // Try upstreams in order; prefer JSON responses
+    let lastError = null;
+    for (const base of bases) {
+      const targetUrl = `${base}${pathWithApi}${url.search}`;
+      try {
+        const response = await fetch(targetUrl, {
+          method: request.method,
+          headers,
+          body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+          redirect: 'manual'
+        });
+        const ct = response.headers.get('content-type') || '';
+        const respHeaders = new Headers(response.headers);
+        respHeaders.set('Access-Control-Allow-Origin', '*');
+        respHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        const allowHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
+        respHeaders.set('Access-Control-Allow-Headers', allowHeaders);
 
-      const respHeaders = new Headers(response.headers);
-      respHeaders.set('Access-Control-Allow-Origin', '*');
-      respHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      const allowHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
-      respHeaders.set('Access-Control-Allow-Headers', allowHeaders);
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: respHeaders
-      });
-    } catch (error) {
-      return new Response(JSON.stringify({ error: 'Proxy Error', details: String(error?.message || error) }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        // Prefer JSON; if not JSON and status indicates Cloudflare error page, try next upstream
+        if (!ct.includes('application/json') && response.status >= 500) {
+          continue;
+        }
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: respHeaders
+        });
+      } catch (error) {
+        lastError = error;
+        continue;
+      }
     }
+    return new Response(JSON.stringify({ error: 'Proxy Error', details: String(lastError?.message || 'All upstreams failed') }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
