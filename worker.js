@@ -22,6 +22,17 @@ export default {
       return new Response('Not Found', { status: 404 });
     }
 
+    if (/^\/(baas-api|api)\/__health__$/i.test(url.pathname)) {
+      return new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+        }
+      });
+    }
+
     // Remove the matched prefix and construct target
     const aipexbasePath = url.pathname.replace(/^\/(baas-api|api)/, '');
     const prefixRaw = (env?.AIPEXBASE_PATH_PREFIX || '/api').trim();
