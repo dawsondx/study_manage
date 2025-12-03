@@ -84,8 +84,10 @@ export default {
           const upstream = new URL(targetUrl);
           const h = new Headers(headers);
           const overrideHost = env?.AIPEXBASE_HOST;
-          h.set('host', overrideHost || upstream.host);
-          if (!h.get('accept')) h.set('accept', 'application/json');
+          const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(upstream.hostname);
+          const fallbackHost = isIp ? (env?.AIPEXBASE_FALLBACK_HOST || 'api.aipexbase.com') : upstream.host;
+          h.set('host', overrideHost || fallbackHost);
+          h.set('accept', 'application/json');
           const response = await fetch(targetUrl, {
             method: request.method,
             headers: h,
