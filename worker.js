@@ -46,7 +46,6 @@ export default {
 
     // Prepare headers
     const headers = new Headers(request.headers);
-    headers.delete('host');
     headers.delete('cf-connecting-ip');
     headers.delete('cf-ipcountry');
     headers.delete('cf-ray');
@@ -58,15 +57,23 @@ export default {
       headers.set('CODE_FLYING', injectedKey);
     }
 
+    let bodyBuf = undefined;
+    if (!(request.method === 'GET' || request.method === 'HEAD')) {
+      try { bodyBuf = await request.arrayBuffer(); } catch (_) {}
+    }
+
     // Try upstreams in order; prefer JSON responses
     let lastError = null;
     for (const base of bases) {
       const targetUrl = `${base}${pathWithApi}${url.search}`;
       try {
+        const upstream = new URL(targetUrl);
+        const h = new Headers(headers);
+        h.set('host', upstream.host);
         const response = await fetch(targetUrl, {
           method: request.method,
-          headers,
-          body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+          headers: h,
+          body: bodyBuf,
           redirect: 'manual'
         });
         const ct = response.headers.get('content-type') || '';
@@ -75,10 +82,19 @@ export default {
         respHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
         const allowHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
         respHeaders.set('Access-Control-Allow-Headers', allowHeaders);
+        respHeaders.set('X-Proxy-Upstream', base);
+        respHeaders.set('X-Proxy-Target', targetUrl);
+        respHeaders.set('X-Proxy-Status', String(response.status));
 
-        // Prefer JSON; if not JSON and status indicates Cloudflare error page, try next upstream
-        if (!ct.includes('application/json') && response.status >= 500) {
-          continue;
+        if (!ct.includes('application/json') && (response.status === 401 || response.status === 403 || response.status >= 500)) {
+          const payload = { error: 'UpstreamRejected', status: response.status, contentType: ct };
+          const h2 = new Headers({ 'Content-Type': 'application/json' });
+          h2.set('Access-Control-Allow-Origin', '*');
+          h2.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+          h2.set('Access-Control-Allow-Headers', allowHeaders);
+          h2.set('X-Proxy-Upstream', base);
+          h2.set('X-Proxy-Target', targetUrl);
+          return new Response(JSON.stringify(payload), { status: 502, headers: h2 });
         }
         return new Response(response.body, {
           status: response.status,
