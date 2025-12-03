@@ -35,9 +35,9 @@ export default {
     headers.delete('cf-visitor');
     headers.delete('x-forwarded-proto');
 
-    // Inject API key server-side if not provided by client
-    if (!headers.get('CODE_FLYING') && env && env.AIPEXBASE_API_KEY) {
-      headers.set('CODE_FLYING', env.AIPEXBASE_API_KEY);
+    const injectedKey = env?.AIPEXBASE_API_KEY || env?.VITE_AIPEX_API_KEY || '';
+    if (!headers.get('CODE_FLYING') && injectedKey) {
+      headers.set('CODE_FLYING', injectedKey);
     }
 
     try {
