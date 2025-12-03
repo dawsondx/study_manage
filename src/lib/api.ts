@@ -1,7 +1,14 @@
 const API_BASE = import.meta.env.VITE_AIPEX_API || ''
-// Hardcoding API Key to ensure it works immediately
-const API_KEY = 'kf_api_rTheZ02YCKAyNdXT9raOsdCHzfLVhbQm'
+const API_KEY = import.meta.env.VITE_AIPEX_API_KEY || 'kf_api_rTheZ02YCKAyNdXT9raOsdCHzfLVhbQm'
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true' || false
+
+// 调试信息
+console.log('API Configuration v3:', {
+  API_BASE: API_BASE,
+  API_KEY: API_KEY ? '***' : 'empty',
+  USE_MOCK_API: USE_MOCK_API,
+  timestamp: new Date().toISOString()
+})
 
 // 调试信息
 console.log('API Configuration v2:', {
@@ -84,12 +91,18 @@ export const api = {
     } else {
       params.phone = phoneOrEmail
     }
+    
+    console.log('Login attempt:', { isEmail, phoneOrEmail, params })
+    
     return request<string>(`/login/passwd`, {
       method: 'POST',
       body: JSON.stringify(params)
     })
   },
-  getUserInfo: () => request<any>(`/getUserInfo`)
+  getUserInfo: () => {
+    console.log('Fetching user info...')
+    return request<any>(`/getUserInfo`)
+  }
   ,
   getResources: () => {
     if (USE_MOCK_API) {
@@ -145,19 +158,26 @@ export const api = {
         }
       }, 1000)
     }
+    
+    console.log('Registration attempt:', { email: payload.email, nick_name: payload.nick_name })
+    
     // 生成随机手机号以满足后端要求
     const randomPhone = '138' + Math.floor(Math.random() * 100000000).toString().padStart(8, '0')
+    const requestBody = {
+      email: payload.email,
+      password: payload.password,
+      user_name: payload.nick_name,
+      username: payload.nick_name, // 增加 username 字段
+      nick_name: payload.nick_name, // 增加 nick_name 字段
+      phone: randomPhone,
+      phone_number: randomPhone
+    }
+    
+    console.log('Registration request body:', requestBody)
+    
     return request<any>(`/login/register`, {
       method: 'POST',
-      body: JSON.stringify({
-        email: payload.email,
-        password: payload.password,
-        user_name: payload.nick_name,
-        username: payload.nick_name, // 增加 username 字段
-        nick_name: payload.nick_name, // 增加 nick_name 字段
-        phone: randomPhone,
-        phone_number: randomPhone
-      })
+      body: JSON.stringify(requestBody)
     })
   }
   ,

@@ -9,6 +9,23 @@ export default defineConfig({
   build: {
     sourcemap: 'hidden',
   },
+  server: {
+    proxy: {
+      '/baas-api': {
+        target: 'https://aipexbaseproxy.dawsondx.workers.dev',
+        changeOrigin: true,
+        secure: true,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Proxy error:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying request:', req.method, req.url, '->', options.target);
+          });
+        }
+      }
+    }
+  },
   plugins: [
     react({
       babel: {

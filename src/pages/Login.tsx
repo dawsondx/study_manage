@@ -48,19 +48,25 @@ export default function Login() {
         await onRegister()
       } else {
         try {
+          console.log('Attempting login...')
           await login(email, password)
+          console.log('Login successful, navigating to dashboard...')
+          navigate('/')
         } catch (err: any) {
+          console.log('Login error:', err)
           const m = String(err?.message || '')
           if (m.includes('参数') || m.includes('UsernameNotFound') || m.includes('NOT_LOGIN') || m.includes('no_auth')) {
+            console.log('User not found, attempting auto-registration...')
             await api.userRegister({ email, password, nick_name: nickName || email.split('@')[0] })
             await login(email, password)
+            navigate('/')
           } else {
             throw err
           }
         }
-        navigate('/')
       }
     } catch (e: any) {
+      console.log('Login/Register error:', e)
       // 更友好的错误处理
       if (e.message?.includes('Failed to fetch')) {
         setError('无法连接到服务器，请确保后端服务已启动')
@@ -83,11 +89,13 @@ export default function Login() {
     setError(null)
     setInfo(null)
     try {
+      console.log('Attempting registration...', { email, nickName })
       await api.userRegister({ email, password, nick_name: nickName })
+      console.log('Registration successful')
       setInfo('注册成功，请登录')
       setIsRegisterMode(false)
     } catch (e: any) {
-      // 更友好的错误处理
+      console.log('Registration error:', e)
       if (e.message?.includes('Failed to fetch')) {
         setError('无法连接到服务器，请确保后端服务已启动')
         toast.error('无法连接到服务器')
@@ -95,7 +103,9 @@ export default function Login() {
         setError('网络连接错误，请检查网络设置')
         toast.error('网络连接错误')
       } else {
-        const msg = e.message || '注册失败，请检查输入信息'
+        const raw = String(e.message || '')
+        const dup = /duplicate|已存在|UNIQUE|email\s*exists|email\s*重复/i.test(raw)
+        const msg = dup ? '该邮箱已存在，请直接登录' : (raw || '注册失败，请检查输入信息')
         setError(msg)
         toast.error(msg)
       }

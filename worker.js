@@ -20,10 +20,11 @@ export default {
             return new Response('Not Found', { status: 404 });
         }
 
-        // 3. Construct target URL
-        // We KEEP the /baas-api prefix as per user instruction and Aipexbase convention
-        // Target: http://backend.dawsondx.top/baas-api/...
-        const targetUrl = 'http://backend.dawsondx.top' + url.pathname + url.search;
+        // 3. Construct target URL for all endpoints
+        // Forward all requests to Aipexbase API
+        // Remove the /baas-api prefix when forwarding to Aipexbase
+        const aipexbasePath = url.pathname.replace(/^\/baas-api/, '');
+        const targetUrl = `https://api.aipexbase.com${aipexbasePath}${url.search}`;
 
         // 4. Prepare headers
         const headers = new Headers(request.headers);

@@ -25,12 +25,16 @@ export const useAuthStore = create<AuthStore>()(
       token: '',
       user: null,
       async login(email, password) {
+        console.log('Attempting login for:', email)
         const token = await api.loginPasswd(email, password)
+        console.log('Login successful, received token:', token ? '***' : 'empty')
         localStorage.setItem('auth_token', token)
         localStorage.setItem('auth_email', email)
         set({ token })
         try {
+          console.log('Fetching user info...')
           await get().fetchUser()
+          console.log('User info fetched successfully')
           const r = useResourceStore.getState()
           const p = useProgressStore.getState()
           const pay = usePaymentStore.getState()
@@ -39,7 +43,9 @@ export const useAuthStore = create<AuthStore>()(
             p.fetchAll(),
             pay.fetchAll()
           ])
-        } catch {
+          console.log('All data fetched successfully')
+        } catch (error) {
+          console.log('Error fetching user data:', error)
           set({ user: { email } })
         }
       },
@@ -58,9 +64,12 @@ export const useAuthStore = create<AuthStore>()(
       },
       async fetchUser() {
         try {
+          console.log('Fetching user info from API...')
           const data = await api.getUserInfo()
+          console.log('User info received:', data)
           set({ user: data || null })
-        } catch {
+        } catch (error) {
+          console.log('Error fetching user info:', error)
           const token = localStorage.getItem('auth_token')
           if (!token) {
             set({ user: null })

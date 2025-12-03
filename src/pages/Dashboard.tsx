@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useResourceStore, useProgressStore, usePaymentStore } from '@/stores';
 import { useAuthStore } from '@/stores/authStore';
 import { DataFormatter, StudyCalculator, PaymentCalculator } from '@/utils';
+import AuthTest from '@/components/AuthTest';
 import { 
   BookOpen, 
   Clock, 
@@ -602,6 +603,13 @@ export default function Dashboard() {
               <span className="text-xs text-orange-600 mt-1">详细数据分析</span>
             </Link>
           </div>
+        </div>
+      )}
+
+      {/* 认证系统测试 */}
+      {authed && (
+        <div className="mt-6">
+          <AuthTest />
         </div>
       )}
     </div>
