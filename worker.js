@@ -58,6 +58,10 @@ export default {
     if (!headers.get('CODE_FLYING') && injectedKey) {
       headers.set('CODE_FLYING', injectedKey);
     }
+    const appId = env?.AIPEXBASE_APP_ID || env?.VITE_APP_ID || '';
+    if (appId && !headers.get('APP_ID')) {
+      headers.set('APP_ID', appId);
+    }
 
     let bodyBuf = undefined;
     if (!(request.method === 'GET' || request.method === 'HEAD')) {
@@ -73,6 +77,7 @@ export default {
         const h = new Headers(headers);
         const overrideHost = env?.AIPEXBASE_HOST;
         h.set('host', overrideHost || upstream.host);
+        if (!h.get('accept')) h.set('accept', 'application/json');
         const response = await fetch(targetUrl, {
           method: request.method,
           headers: h,
