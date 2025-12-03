@@ -24,7 +24,9 @@ export default {
 
     // Remove the matched prefix and construct target
     const aipexbasePath = url.pathname.replace(/^\/(baas-api|api)/, '');
-    const pathWithApi = aipexbasePath.startsWith('/api') ? aipexbasePath : `/api${aipexbasePath}`;
+    const prefixRaw = (env?.AIPEXBASE_PATH_PREFIX || '/api').trim();
+    const prefix = prefixRaw.startsWith('/') ? prefixRaw : `/${prefixRaw}`;
+    const pathWithApi = aipexbasePath.startsWith(prefix) ? aipexbasePath : `${prefix}${aipexbasePath}`;
     const bases = Array.from(new Set([
       env?.AIPEXBASE_BASE,
       'https://api.aipexbase.com',
