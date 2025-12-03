@@ -87,7 +87,7 @@ export default {
         respHeaders.set('X-Proxy-Status', String(response.status));
 
         if (!ct.includes('application/json') && (response.status === 401 || response.status === 403 || response.status >= 500)) {
-          const payload = { error: 'UpstreamRejected', status: response.status, contentType: ct };
+          const payload = { code: response.status, success: false, message: `UpstreamRejected: status=${response.status}, ct=${ct}`, data: null };
           const h2 = new Headers({ 'Content-Type': 'application/json' });
           h2.set('Access-Control-Allow-Origin', '*');
           h2.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
