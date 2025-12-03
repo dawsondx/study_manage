@@ -1,66 +1,69 @@
 export default {
-    async fetch(request) {
-        const url = new URL(request.url);
+  async fetch(request, env) {
+    const url = new URL(request.url);
 
-        // 1. Handle CORS preflight requests
-        if (request.method === 'OPTIONS') {
-            return new Response(null, {
-                status: 204,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                    'Access-Control-Allow-Headers': '*',
-                    'Access-Control-Max-Age': '86400',
-                }
-            });
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      const reqHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': reqHeaders,
+          'Access-Control-Max-Age': '86400'
         }
-
-        // 2. Check path prefix
-        if (!url.pathname.startsWith('/baas-api/')) {
-            return new Response('Not Found', { status: 404 });
-        }
-
-        // 3. Construct target URL for all endpoints
-        // Forward all requests to Aipexbase API
-        // Remove the /baas-api prefix when forwarding to Aipexbase
-        const aipexbasePath = url.pathname.replace(/^\/baas-api/, '');
-        const targetUrl = `https://api.aipexbase.com${aipexbasePath}${url.search}`;
-
-        // 4. Prepare headers
-        const headers = new Headers(request.headers);
-        // Remove headers that might confuse the backend or are specific to the proxy
-        headers.delete('host');
-        headers.delete('cf-connecting-ip');
-        headers.delete('cf-ipcountry');
-        headers.delete('cf-ray');
-        headers.delete('cf-visitor');
-        headers.delete('x-forwarded-proto');
-
-        // 5. Forward request
-        try {
-            const response = await fetch(targetUrl, {
-                method: request.method,
-                headers: headers,
-                body: request.body,
-                redirect: 'manual' // Let the client handle redirects if needed
-            });
-
-            // 6. Prepare response headers (CORS)
-            const responseHeaders = new Headers(response.headers);
-            responseHeaders.set('Access-Control-Allow-Origin', '*');
-            responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            responseHeaders.set('Access-Control-Allow-Headers', '*');
-
-            return new Response(response.body, {
-                status: response.status,
-                statusText: response.statusText,
-                headers: responseHeaders
-            });
-        } catch (error) {
-            return new Response(JSON.stringify({ error: 'Proxy Error', details: error.message }), {
-                status: 502,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+      });
     }
-};
+
+    // Match both /baas-api and /api prefixes
+    const match = url.pathname.match(/^\/(baas-api|api)(\/|$)/);
+    if (!match) {
+      return new Response('Not Found', { status: 404 });
+    }
+
+    // Remove the matched prefix
+    const aipexbasePath = url.pathname.replace(/^\/(baas-api|api)/, '');
+    const targetUrl = `https://api.aipexbase.com${aipexbasePath}${url.search}`;
+
+    // Prepare headers
+    const headers = new Headers(request.headers);
+    headers.delete('host');
+    headers.delete('cf-connecting-ip');
+    headers.delete('cf-ipcountry');
+    headers.delete('cf-ray');
+    headers.delete('cf-visitor');
+    headers.delete('x-forwarded-proto');
+
+    // Inject API key server-side if not provided by client
+    if (!headers.get('CODE_FLYING') && env && env.AIPEXBASE_API_KEY) {
+      headers.set('CODE_FLYING', env.AIPEXBASE_API_KEY);
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+        redirect: 'manual'
+      });
+
+      const respHeaders = new Headers(response.headers);
+      respHeaders.set('Access-Control-Allow-Origin', '*');
+      respHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      const allowHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
+      respHeaders.set('Access-Control-Allow-Headers', allowHeaders);
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: respHeaders
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Proxy Error', details: String(error?.message || error) }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  }
+}
