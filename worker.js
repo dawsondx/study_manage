@@ -37,7 +37,9 @@ export default {
     const aipexbasePath = url.pathname.replace(/^\/(baas-api|api)/, '');
     const prefixRaw = (env?.AIPEXBASE_PATH_PREFIX || '/api').trim();
     const prefix = prefixRaw.startsWith('/') ? prefixRaw : `/${prefixRaw}`;
-    const pathWithApi = aipexbasePath.startsWith(prefix) ? aipexbasePath : `${prefix}${aipexbasePath}`;
+    const extraPrefixesRaw = (env?.AIPEXBASE_PATH_PREFIXES || '').trim();
+    const prefixList = [prefix].concat(extraPrefixesRaw ? extraPrefixesRaw.split(',').map(p => p.trim()) : []);
+    const normalizedPrefixes = Array.from(new Set(prefixList.filter(Boolean).map(p => p.startsWith('/') ? p : `/${p}`).concat([''])));
     const bases = Array.from(new Set([
       env?.AIPEXBASE_BASE,
       'https://api.aipexbase.com',
@@ -58,6 +60,10 @@ export default {
     if (!headers.get('CODE_FLYING') && injectedKey) {
       headers.set('CODE_FLYING', injectedKey);
     }
+    if (!headers.get('X-API-Key') && injectedKey) {
+      headers.set('X-API-Key', injectedKey);
+      headers.set('x-api-key', injectedKey);
+    }
     const appId = env?.AIPEXBASE_APP_ID || env?.VITE_APP_ID || '';
     if (appId && !headers.get('APP_ID')) {
       headers.set('APP_ID', appId);
@@ -71,47 +77,59 @@ export default {
     // Try upstreams in order; prefer JSON responses
     let lastError = null;
     for (const base of bases) {
-      const targetUrl = `${base}${pathWithApi}${url.search}`;
-      try {
-        const upstream = new URL(targetUrl);
-        const h = new Headers(headers);
-        const overrideHost = env?.AIPEXBASE_HOST;
-        h.set('host', overrideHost || upstream.host);
-        if (!h.get('accept')) h.set('accept', 'application/json');
-        const response = await fetch(targetUrl, {
-          method: request.method,
-          headers: h,
-          body: bodyBuf,
-          redirect: 'manual'
-        });
-        const ct = response.headers.get('content-type') || '';
-        const respHeaders = new Headers(response.headers);
-        respHeaders.set('Access-Control-Allow-Origin', '*');
-        respHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        const allowHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
-        respHeaders.set('Access-Control-Allow-Headers', allowHeaders);
-        respHeaders.set('X-Proxy-Upstream', base);
-        respHeaders.set('X-Proxy-Target', targetUrl);
-        respHeaders.set('X-Proxy-Status', String(response.status));
+      let lastStatus = 0;
+      for (const pfx of normalizedPrefixes) {
+        const targetUrl = `${base}${aipexbasePath.startsWith(pfx) ? aipexbasePath : `${pfx}${aipexbasePath}`}${url.search}`;
+        try {
+          const upstream = new URL(targetUrl);
+          const h = new Headers(headers);
+          const overrideHost = env?.AIPEXBASE_HOST;
+          h.set('host', overrideHost || upstream.host);
+          if (!h.get('accept')) h.set('accept', 'application/json');
+          const response = await fetch(targetUrl, {
+            method: request.method,
+            headers: h,
+            body: bodyBuf,
+            redirect: 'manual'
+          });
+          const ct = response.headers.get('content-type') || '';
+          const respHeaders = new Headers(response.headers);
+          respHeaders.set('Access-Control-Allow-Origin', '*');
+          respHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+          const allowHeaders = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
+          respHeaders.set('Access-Control-Allow-Headers', allowHeaders);
+          respHeaders.set('X-Proxy-Upstream', base);
+          respHeaders.set('X-Proxy-Target', targetUrl);
+          respHeaders.set('X-Proxy-Status', String(response.status));
+          respHeaders.set('X-Proxy-Prefix', pfx || '/');
 
-        if (!ct.includes('application/json') && (response.status === 401 || response.status === 403 || response.status >= 500)) {
-          const payload = { code: response.status, success: false, message: `UpstreamRejected: status=${response.status}, ct=${ct}`, data: null };
-          const h2 = new Headers({ 'Content-Type': 'application/json' });
-          h2.set('Access-Control-Allow-Origin', '*');
-          h2.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-          h2.set('Access-Control-Allow-Headers', allowHeaders);
-          h2.set('X-Proxy-Upstream', base);
-          h2.set('X-Proxy-Target', targetUrl);
-          return new Response(JSON.stringify(payload), { status: 502, headers: h2 });
+          if (!ct.includes('application/json') && (response.status === 401 || response.status === 403 || response.status >= 500)) {
+            lastStatus = response.status;
+            continue;
+          }
+          if (!ct.includes('application/json') && response.status >= 300 && response.status < 400) {
+            lastStatus = response.status;
+            continue;
+          }
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: respHeaders
+          });
+        } catch (error) {
+          lastError = error;
+          continue;
         }
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: respHeaders
-        });
-      } catch (error) {
-        lastError = error;
-        continue;
+      }
+      if (lastStatus) {
+        const allowHeaders2 = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
+        const payload = { code: lastStatus, success: false, message: `UpstreamRejected: status=${lastStatus}`, data: null };
+        const h2 = new Headers({ 'Content-Type': 'application/json' });
+        h2.set('Access-Control-Allow-Origin', '*');
+        h2.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        h2.set('Access-Control-Allow-Headers', allowHeaders2);
+        h2.set('X-Proxy-Upstream', base);
+        return new Response(JSON.stringify(payload), { status: 502, headers: h2 });
       }
     }
     return new Response(JSON.stringify({ error: 'Proxy Error', details: String(lastError?.message || 'All upstreams failed') }), {
