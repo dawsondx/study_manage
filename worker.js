@@ -69,7 +69,8 @@ export default {
       try {
         const upstream = new URL(targetUrl);
         const h = new Headers(headers);
-        h.set('host', upstream.host);
+        const overrideHost = env?.AIPEXBASE_HOST;
+        h.set('host', overrideHost || upstream.host);
         const response = await fetch(targetUrl, {
           method: request.method,
           headers: h,
