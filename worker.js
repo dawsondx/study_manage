@@ -78,6 +78,10 @@ export default {
     let lastError = null;
     for (const base of bases) {
       let lastStatus = 0;
+      let lastCt = '';
+      let lastTarget = '';
+      let lastPrefix = '';
+      let lastPreview = '';
       for (const pfx of normalizedPrefixes) {
         const targetUrl = `${base}${aipexbasePath.startsWith(pfx) ? aipexbasePath : `${pfx}${aipexbasePath}`}${url.search}`;
         try {
@@ -104,13 +108,21 @@ export default {
           respHeaders.set('X-Proxy-Target', targetUrl);
           respHeaders.set('X-Proxy-Status', String(response.status));
           respHeaders.set('X-Proxy-Prefix', pfx || '/');
+          respHeaders.set('X-Proxy-Host-Used', h.get('host') || '');
 
           if (!ct.includes('application/json') && (response.status === 401 || response.status === 403 || response.status >= 500)) {
             lastStatus = response.status;
+            lastCt = ct;
+            lastTarget = targetUrl;
+            lastPrefix = pfx || '/';
+            try { lastPreview = (await response.text()).slice(0, 240); } catch (_) {}
             continue;
           }
           if (!ct.includes('application/json') && response.status >= 300 && response.status < 400) {
             lastStatus = response.status;
+            lastCt = ct;
+            lastTarget = targetUrl;
+            lastPrefix = pfx || '/';
             continue;
           }
           return new Response(response.body, {
@@ -125,7 +137,7 @@ export default {
       }
       if (lastStatus) {
         const allowHeaders2 = request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, CODE_FLYING';
-        const payload = { code: lastStatus, success: false, message: `UpstreamRejected: status=${lastStatus}`, data: null };
+        const payload = { code: lastStatus, success: false, message: `UpstreamRejected`, data: null, details: { status: lastStatus, contentType: lastCt, target: lastTarget, prefix: lastPrefix, preview: lastPreview } };
         const h2 = new Headers({ 'Content-Type': 'application/json' });
         h2.set('Access-Control-Allow-Origin', '*');
         h2.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
